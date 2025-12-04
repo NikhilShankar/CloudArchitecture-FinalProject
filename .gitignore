@@ -1,0 +1,60 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# AWS credentials and sensitive files
+*.pem
+*.key
+.aws/
+credentials
+*.credentials
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Screenshots (optional - uncomment if you don't want to commit screenshots)
+# screenshots/*.png
+# screenshots/*.jpg
+
+# Backup files
+*.bak
+*.backup
+
+# Node modules (if using any JS tools)
+node_modules/
+
+# Python virtual environments (if using Python tools)
+venv/
+__pycache__/
+*.pyc

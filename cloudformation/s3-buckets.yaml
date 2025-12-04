@@ -1,0 +1,125 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for creating 3 private S3 buckets with versioning enabled'
+
+Resources:
+  # First S3 bucket - fully private with versioning
+  S3Bucket1:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      # Import project prefix from global parameters stack
+      BucketName: !Sub
+        - '${Prefix}-bucket-1'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+
+      # Enable versioning to keep multiple versions of objects
+      VersioningConfiguration:
+        Status: Enabled
+
+      # Block all public access - no one can make this bucket public
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-bucket-1'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+        - Key: Environment
+          Value: 'Development'
+
+  # Second S3 bucket - fully private with versioning
+  S3Bucket2:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub
+        - '${Prefix}-bucket-2'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+
+      VersioningConfiguration:
+        Status: Enabled
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-bucket-2'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+        - Key: Environment
+          Value: 'Development'
+
+  # Third S3 bucket - fully private with versioning
+  S3Bucket3:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub
+        - '${Prefix}-bucket-3'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+
+      VersioningConfiguration:
+        Status: Enabled
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-bucket-3'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+        - Key: Environment
+          Value: 'Development'
+
+# Export bucket names and ARNs for use in other stacks or applications
+Outputs:
+  S3Bucket1Name:
+    Description: 'Name of S3 Bucket 1'
+    Value: !Ref S3Bucket1
+    Export:
+      Name: !Sub '${AWS::StackName}-Bucket1'
+
+  S3Bucket2Name:
+    Description: 'Name of S3 Bucket 2'
+    Value: !Ref S3Bucket2
+    Export:
+      Name: !Sub '${AWS::StackName}-Bucket2'
+
+  S3Bucket3Name:
+    Description: 'Name of S3 Bucket 3'
+    Value: !Ref S3Bucket3
+    Export:
+      Name: !Sub '${AWS::StackName}-Bucket3'
+
+  S3Bucket1ARN:
+    Description: 'ARN of S3 Bucket 1'
+    Value: !GetAtt S3Bucket1.Arn
+
+  S3Bucket2ARN:
+    Description: 'ARN of S3 Bucket 2'
+    Value: !GetAtt S3Bucket2.Arn
+
+  S3Bucket3ARN:
+    Description: 'ARN of S3 Bucket 3'
+    Value: !GetAtt S3Bucket3.Arn

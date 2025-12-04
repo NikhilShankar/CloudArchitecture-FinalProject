@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for EC2 instance in custom VPC with public IP and SSH access'
+
+Parameters:
+  NetworkStackName:
+    Type: String
+    Default: 'cloudinfra-finalproject-cf-9026254-network-stack'
+    Description: 'Name of the network stack to import values from'
+
+  InstanceType:
+    Type: String
+    Default: 't2.micro'
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t3.micro
+      - t3.small
+    Description: 'EC2 instance type (t2.micro is free tier eligible)'
+
+  KeyPairName:
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: 'Name of an existing EC2 KeyPair to enable SSH access'
+    ConstraintDescription: 'Must be the name of an existing EC2 KeyPair'
+
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+    Description: 'Latest Amazon Linux 2 AMI ID (automatically fetched)'
+
+Resources:
+  # EC2 instance with public IP and SSH access
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+
+      # Place instance in public subnet with internet access
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          SubnetId:
+            Fn::ImportValue: !Sub '${NetworkStackName}-PublicSubnet-ID'
+          GroupSet:
+            - Fn::ImportValue: !Sub '${NetworkStackName}-EC2-SG-ID'
+
+      # Startup script runs when instance launches
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y git wget curl htop
+
+          # Create welcome file with instance metadata
+          echo "Welcome to CloudFormation EC2 Instance" > /home/ec2-user/welcome.txt
+          echo "Instance ID: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)" >> /home/ec2-user/welcome.txt
+          echo "Availability Zone: $(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)" >> /home/ec2-user/welcome.txt
+          echo "Public IP: $(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)" >> /home/ec2-user/welcome.txt
+          chown ec2-user:ec2-user /home/ec2-user/welcome.txt
+
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-ec2-instance'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+        - Key: Environment
+          Value: 'Development'
+
+  # Elastic IP for static public address
+  ElasticIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref EC2Instance
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-eip'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+# Export instance connection details
+Outputs:
+  InstanceId:
+    Description: 'EC2 Instance ID'
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${AWS::StackName}-Instance-ID'
+
+  PublicIP:
+    Description: 'Public IP address of EC2 instance'
+    Value: !GetAtt EC2Instance.PublicIp
+
+  ElasticIP:
+    Description: 'Elastic IP address assigned to EC2 instance'
+    Value: !Ref ElasticIP
+
+  PublicDNS:
+    Description: 'Public DNS name of EC2 instance'
+    Value: !GetAtt EC2Instance.PublicDnsName
+
+  PrivateIP:
+    Description: 'Private IP address of EC2 instance'
+    Value: !GetAtt EC2Instance.PrivateIp
+
+  AvailabilityZone:
+    Description: 'Availability Zone where instance is running'
+    Value: !GetAtt EC2Instance.AvailabilityZone
+
+  SSHCommand:
+    Description: 'SSH command to connect to the instance'
+    Value: !Sub 'ssh -i ${KeyPairName}.pem ec2-user@${EC2Instance.PublicIp}'
+
+  InstanceState:
+    Description: 'Current state of the EC2 instance'
+    Value: !GetAtt EC2Instance.State

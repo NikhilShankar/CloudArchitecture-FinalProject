@@ -1,0 +1,278 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for VPC, Subnets, Internet Gateway, Route Tables, and Security Groups'
+
+Parameters:
+  VpcCIDR:
+    Type: String
+    Default: '10.0.0.0/16'
+    Description: 'CIDR block for VPC'
+
+  PublicSubnetCIDR:
+    Type: String
+    Default: '10.0.1.0/24'
+    Description: 'CIDR block for public subnet (for EC2)'
+
+  PrivateSubnet1CIDR:
+    Type: String
+    Default: '10.0.3.0/24'
+    Description: 'CIDR block for private subnet 1 (for RDS)'
+
+  PrivateSubnet2CIDR:
+    Type: String
+    Default: '10.0.4.0/24'
+    Description: 'CIDR block for private subnet 2 (for RDS)'
+
+Resources:
+  # Main VPC for all resources
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      # Enable DNS resolution for instances
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-vpc'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+
+  # Internet Gateway for public internet access
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-igw'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # Attach Internet Gateway to VPC
+  AttachGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public subnet for EC2 with internet access
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetCIDR
+      AvailabilityZone: !Select [0, !GetAZs '']
+      # Auto-assign public IP to instances launched here
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-public-subnet'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Type
+          Value: 'Public'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # Private subnet 1 for RDS - no internet access
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-private-subnet-1'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Type
+          Value: 'Private'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # Private subnet 2 for RDS - different AZ for redundancy
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-private-subnet-2'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Type
+          Value: 'Private'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # Route table for public subnet
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-public-rt'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # Route to Internet Gateway in Public Route Table
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  # Associate Public Subnet with Public Route Table
+  PublicSubnetRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # Security group for EC2 - allows SSH access
+  EC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Sub
+        - '${Prefix}-ec2-sg'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+      GroupDescription: 'Security group for EC2 instance - allows SSH access'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        # Allow SSH from anywhere (for demo purposes only)
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow SSH access from anywhere'
+      SecurityGroupEgress:
+        # Allow all outbound traffic
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-ec2-sg'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # Security group for RDS - allows MySQL access
+  RDSSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Sub
+        - '${Prefix}-rds-sg'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+      GroupDescription: 'Security group for RDS instance - allows MySQL access'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        # Allow MySQL from anywhere (for demo purposes only)
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow MySQL access from anywhere'
+        # Also allow from EC2 instances
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+          Description: 'Allow MySQL access from EC2 instances'
+      SecurityGroupEgress:
+        # Allow all outbound traffic
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
+          Description: 'Allow all outbound traffic'
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-rds-sg'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+  # DB subnet group for RDS - spans multiple AZs for high availability
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupName: !Sub
+        - '${Prefix}-db-subnet-group'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+      DBSubnetGroupDescription: 'Subnet group for RDS instance spanning multiple AZs'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-db-subnet-group'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+
+# Export all network resource IDs for use in EC2 and RDS stacks
+Outputs:
+  VPCId:
+    Description: 'VPC ID'
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPC-ID'
+
+  PublicSubnetId:
+    Description: 'Public Subnet ID'
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet-ID'
+
+  PrivateSubnet1Id:
+    Description: 'Private Subnet 1 ID'
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1-ID'
+
+  PrivateSubnet2Id:
+    Description: 'Private Subnet 2 ID'
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2-ID'
+
+  EC2SecurityGroupId:
+    Description: 'EC2 Security Group ID'
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-EC2-SG-ID'
+
+  RDSSecurityGroupId:
+    Description: 'RDS Security Group ID'
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-SG-ID'
+
+  DBSubnetGroupName:
+    Description: 'DB Subnet Group Name'
+    Value: !Ref DBSubnetGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-DBSubnetGroup-Name'
+
+  InternetGatewayId:
+    Description: 'Internet Gateway ID'
+    Value: !Ref InternetGateway
+    Export:
+      Name: !Sub '${AWS::StackName}-IGW-ID'

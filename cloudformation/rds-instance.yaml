@@ -1,0 +1,204 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for MySQL RDS instance with public accessibility'
+
+Parameters:
+  NetworkStackName:
+    Type: String
+    Default: 'cloudinfra-finalproject-cf-9026254-network-stack'
+    Description: 'Name of the network stack to import values from'
+
+  DBInstanceClass:
+    Type: String
+    Default: 'db.t3.micro'
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t2.micro
+      - db.t2.small
+    Description: 'RDS instance class (db.t3.micro recommended for free tier)'
+
+  DBAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 100
+    Description: 'Allocated storage size in GB (20 GB minimum)'
+
+  DBEngine:
+    Type: String
+    Default: 'mysql'
+    AllowedValues:
+      - mysql
+    Description: 'Database engine type'
+
+  DBEngineVersion:
+    Type: String
+    Default: '8.0.35'
+    Description: 'MySQL engine version'
+
+  DBName:
+    Type: String
+    Default: 'myappdatabase'
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    Description: 'Name of the initial database to create'
+    ConstraintDescription: 'Must begin with a letter and contain only alphanumeric characters'
+
+  DBUsername:
+    Type: String
+    Default: 'admin'
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    Description: 'Master username for database access'
+    ConstraintDescription: 'Must begin with a letter and contain only alphanumeric characters'
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 41
+    AllowedPattern: '[a-zA-Z0-9!@#$%^&*()_+=-]*'
+    Description: 'Master password for database access (min 8 characters)'
+    ConstraintDescription: 'Must be at least 8 characters and contain only alphanumeric and special characters'
+
+  BackupRetentionPeriod:
+    Type: Number
+    Default: 7
+    MinValue: 0
+    MaxValue: 35
+    Description: 'Number of days to retain automated backups (0-35)'
+
+  PreferredBackupWindow:
+    Type: String
+    Default: '03:00-04:00'
+    Description: 'Daily time range for automated backups (UTC)'
+
+  PreferredMaintenanceWindow:
+    Type: String
+    Default: 'sun:04:00-sun:05:00'
+    Description: 'Weekly time range for system maintenance (UTC)'
+
+Resources:
+  # MySQL RDS database instance
+  RDSInstance:
+    Type: 'AWS::RDS::DBInstance'
+    DeletionPolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub
+        - '${Prefix}-rds-mysql'
+        - Prefix: !ImportValue 'GlobalProjectPrefix'
+
+      # MySQL 8.0 engine
+      Engine: !Ref DBEngine
+      EngineVersion: !Ref DBEngineVersion
+      DBInstanceClass: !Ref DBInstanceClass
+
+      # 20GB SSD storage
+      AllocatedStorage: !Ref DBAllocatedStorage
+      StorageType: 'gp2'
+      StorageEncrypted: false
+
+      # Database credentials
+      DBName: !Ref DBName
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      Port: 3306
+
+      # Network settings from network stack
+      DBSubnetGroupName:
+        Fn::ImportValue: !Sub '${NetworkStackName}-DBSubnetGroup-Name'
+      VPCSecurityGroups:
+        - Fn::ImportValue: !Sub '${NetworkStackName}-RDS-SG-ID'
+
+      # Public access enabled for demo only
+      PubliclyAccessible: true
+
+      # Single AZ for cost savings
+      MultiAZ: false
+      AvailabilityZone: !Select [0, !GetAZs '']
+
+      # Automated backups
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      PreferredBackupWindow: !Ref PreferredBackupWindow
+      CopyTagsToSnapshot: true
+
+      # Maintenance window
+      PreferredMaintenanceWindow: !Ref PreferredMaintenanceWindow
+      AutoMinorVersionUpgrade: true
+
+      # CloudWatch logs export
+      EnableCloudwatchLogsExports:
+        - error
+        - general
+        - slowquery
+
+      EnablePerformanceInsights: false
+      DeletionProtection: false
+
+      Tags:
+        - Key: Name
+          Value: !Sub
+            - '${Prefix}-rds-mysql'
+            - Prefix: !ImportValue 'GlobalProjectPrefix'
+        - Key: Project
+          Value: 'CloudFormation-Final-Project'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+        - Key: Environment
+          Value: 'Development'
+        - Key: Engine
+          Value: 'MySQL'
+
+# Export database connection information
+Outputs:
+  RDSInstanceIdentifier:
+    Description: 'RDS Instance Identifier'
+    Value: !Ref RDSInstance
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-Instance-ID'
+
+  RDSEndpoint:
+    Description: 'RDS Instance Endpoint Address'
+    Value: !GetAtt RDSInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-Endpoint'
+
+  RDSPort:
+    Description: 'RDS Instance Port'
+    Value: !GetAtt RDSInstance.Endpoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-RDS-Port'
+
+  DatabaseName:
+    Description: 'Name of the initial database'
+    Value: !Ref DBName
+
+  DatabaseUsername:
+    Description: 'Master username for database'
+    Value: !Ref DBUsername
+
+  ConnectionString:
+    Description: 'MySQL connection string'
+    Value: !Sub 'mysql -h ${RDSInstance.Endpoint.Address} -P ${RDSInstance.Endpoint.Port} -u ${DBUsername} -p ${DBName}'
+
+  JDBCConnectionString:
+    Description: 'JDBC connection string for applications'
+    Value: !Sub 'jdbc:mysql://${RDSInstance.Endpoint.Address}:${RDSInstance.Endpoint.Port}/${DBName}'
+
+  EngineVersion:
+    Description: 'MySQL engine version'
+    Value: !Ref DBEngineVersion
+
+  InstanceClass:
+    Description: 'RDS instance class'
+    Value: !Ref DBInstanceClass
+
+  AllocatedStorage:
+    Description: 'Allocated storage in GB'
+    Value: !Ref DBAllocatedStorage
+
+  AvailabilityZone:
+    Description: 'Availability zone where RDS instance is running'
+    Value: !GetAtt RDSInstance.AvailabilityZone

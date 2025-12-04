@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Global parameters stack - Single source of truth for project-wide configuration'
+
+Parameters:
+  ProjectPrefix:
+    Type: String
+    Default: 'cloudinfra-finalproject-cf-9026254'
+    Description: 'Global prefix for all resources across all stacks'
+    # Change this value once, and it applies to all stacks that import it
+
+Resources:
+  # This stack doesn't create any resources - it only exports parameters
+  # Using AWS::CloudFormation::WaitConditionHandle as a dummy resource
+  DummyResource:
+    Type: 'AWS::CloudFormation::WaitConditionHandle'
+
+# Export the prefix so other stacks can import it
+Outputs:
+  ProjectPrefix:
+    Description: 'Project prefix used across all stacks'
+    Value: !Ref ProjectPrefix
+    Export:
+      # This export name is used by other stacks to import the prefix
+      Name: 'GlobalProjectPrefix'
+
+  StackName:
+    Description: 'Name of this parameters stack'
+    Value: !Ref 'AWS::StackName'

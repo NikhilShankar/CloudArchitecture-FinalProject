@@ -33,7 +33,7 @@ Parameters:
 
   DBEngineVersion:
     Type: String
-    Default: '8.0.35'
+    Default: '8.0.40'
     Description: 'MySQL engine version'
 
   DBName:

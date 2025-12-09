@@ -117,6 +117,6 @@ Outputs:
     Description: 'SSH command to connect to the instance'
     Value: !Sub 'ssh -i ${KeyPairName}.pem ec2-user@${EC2Instance.PublicIp}'
 
-  InstanceState:
-    Description: 'Current state of the EC2 instance'
-    Value: !GetAtt EC2Instance.State
+  AvailabilityZone2:
+    Description: 'Availability Zone of the instance'
+    Value: !GetAtt EC2Instance.AvailabilityZone

@@ -52,10 +52,7 @@ Edit `parameters.yaml` and modify the `ProjectPrefix` default value. All other s
 
 **Deployment Command:**
 ```bash
-aws cloudformation create-stack \
-  --stack-name cloudinfra-finalproject-cf-9026254-s3-stack \
-  --template-body file://cloudformation/s3-buckets.yaml \
-  --region us-east-1
+aws cloudformation create-stack --stack-name cloudinfra-finalproject-cf-9026254-s3-stack --template-body file://cloudformation/s3-buckets.yaml --region us-east-1
 ```
 
 **Verification Steps:**
@@ -109,6 +106,11 @@ aws cloudformation create-stack \
 
 ### 3. EC2 Instance Deployment
 
+#### Create PEM Keys for SSH 
+```
+aws ec2 create-key-pair  --key-name cloudinfra-finalproject-keypair  --query 'KeyMaterial'  --output text  --region us-east-1 > cloudinfra-finalproject-keypair.pem  
+```
+
 #### Template: `ec2-instance.yaml`
 
 **Stack Name:** `cloudinfra-finalproject-cf-9026254-ec2-stack`
@@ -123,6 +125,8 @@ aws cloudformation create-stack \
     ParameterKey=InstanceType,ParameterValue=t2.micro \
   --region us-east-1
 ```
+
+
 
 **Parameters Used:**
 - `KeyPairName`: Your existing EC2 key pair

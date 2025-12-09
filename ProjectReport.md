@@ -1,6 +1,9 @@
-# AWS Infrastructure Automation - Project Report
+#  PROG 8870 - Cloud Architectures and Infrastructure as Code
+## Deploying AWS Infrastructure with Terraform and CloudFormation 
 
-**Student ID:** 9026254 | **Course:** PROG 8870 - Cloud Architecture
+### **Project Report**
+**Prepared by** : Nikhil Shankar Chirakkal Sivasankaran
+**Student ID:** 9026254 
 
 ---
 
@@ -16,8 +19,7 @@ Deployed identical AWS infrastructure using CloudFormation and Terraform:
 
 ## Architecture
 
-![Architecture Overview]
-*[SCREENSHOT: screenshots/architecture-overview.png]*
+![Architecture Overview](presentation/Infographic.png)
 
 **Network Layout:**
 - 1 Public subnet (EC2)
@@ -54,9 +56,7 @@ Parameters:
     Default: !ImportValue GlobalProjectPrefix
 ```
 
-![CloudFormation Stacks]
-*[SCREENSHOT: screenshots/CloudFormation/cloudformation-stacks-list.png]*
-
+![CloudFormation Stacks](screenshots/CloudFormation/Stack1-Parameters-Console.png)
 ---
 
 ### Terraform
@@ -84,9 +84,8 @@ data "aws_ami" "amazon_linux_2" {
 }
 ```
 
-![Terraform Apply]
-*[SCREENSHOT: screenshots/terraform/terraform-apply-complete.png]*
-
+![Terraform Apply](screenshots/terraform/1.TerraformPlan.png)
+![Terraform Apply](screenshots/terraform/4.TerraformApply-MySQL.png)
 ---
 
 ## Modularity & Best Practices
@@ -116,11 +115,11 @@ data "aws_ami" "amazon_linux_2" {
 - Versioning enabled
 - Public access blocked
 
-![S3 Buckets - CloudFormation]
-*[SCREENSHOT: screenshots/CloudFormation/s3-buckets-list.png]*
+![CloudFormation Stacks](screenshots/CloudFormation/Stack2-S3Buckets-Console.png)
 
-![S3 Buckets - Terraform]
-*[SCREENSHOT: screenshots/terraform/s3-buckets-list.png]*
+
+![Terraform Apply](screenshots/terraform/3.S3-Terraform.png)
+
 
 ---
 
@@ -129,11 +128,8 @@ data "aws_ami" "amazon_linux_2" {
 - Public subnet for EC2
 - 2 private subnets (different AZs) for RDS
 
-![VPC - CloudFormation]
-*[SCREENSHOT: screenshots/CloudFormation/vpc-details.png]*
+![CloudFormation Stacks](screenshots/CloudFormation/Stack3-Networking-Console.png)
 
-![VPC - Terraform]
-*[SCREENSHOT: screenshots/terraform/vpc-details.png]*
 
 ---
 
@@ -143,14 +139,9 @@ data "aws_ami" "amazon_linux_2" {
 - Public subnet with public IP
 - SSH access (port 22)
 
-![EC2 - CloudFormation]
-*[SCREENSHOT: screenshots/CloudFormation/ec2-instance-running.png]*
+![CloudFormation Stacks](screenshots/CloudFormation/Stack4-EC2-Console.png)
 
-![EC2 - Terraform]
-*[SCREENSHOT: screenshots/terraform/ec2-instance-running.png]*
-
-![SSH Connection]
-*[SCREENSHOT: screenshots/terraform/ssh-connection-successful.png]*
+![Terraform Apply](screenshots/terraform/5.EC2-Terraform.png)
 
 ---
 
@@ -159,11 +150,10 @@ data "aws_ami" "amazon_linux_2" {
 - Instance: db.t3.micro (Free Tier)
 - Private subnets only (not publicly accessible)
 
-![RDS - CloudFormation]
-*[SCREENSHOT: screenshots/CloudFormation/rds-instance-available.png]*
+![CloudFormation Stacks](screenshots/CloudFormation/Stack5-RDS-Console.png)
 
-![RDS - Terraform]
-*[SCREENSHOT: screenshots/terraform/rds-instance-available.png]*
+![Terraform Apply](screenshots/terraform/2.RDS-Terraform.png)
+
 
 ---
 
@@ -181,11 +171,9 @@ aws cloudformation create-stack --stack-name ...-rds-stack --template-body file:
 **Terraform (Single Command):**
 ```bash
 terraform init
+terraform plan
 terraform apply
 ```
-
-![Terraform Outputs]
-*[SCREENSHOT: screenshots/terraform/terraform-outputs.png]*
 
 ---
 
@@ -230,5 +218,5 @@ Both tools achieve the same result with different approaches. Choice depends on 
 
 ---
 
-**Project Repository:** [Add GitHub URL]
+**Project Repository:** [\[GitHub URL\]](https://github.com/NikhilShankar/CloudArchitecture-FinalProject)
 **Student ID:** 9026254
